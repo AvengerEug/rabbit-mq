@@ -9,14 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>hello-rabbit-mq</artifactId>
+    <artifactId>fanout-exchange</artifactId>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-amqp</artifactId>
-            <version>1.5.2.RELEASE</version>
-        </dependency>
-    </dependencies>
 
 </project>

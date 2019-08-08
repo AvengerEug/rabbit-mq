@@ -7,7 +7,7 @@ import java.util.concurrent.TimeoutException;
 
 public class OneConsumer {
 
-    private static final String QUEUE_NAME = "rabbit:mq01:quene:eug";
+    private static final String QUEUE_NAME = "rabbit:mq01:queue:eug";
 
     public static void main(String[] args) {
         try {

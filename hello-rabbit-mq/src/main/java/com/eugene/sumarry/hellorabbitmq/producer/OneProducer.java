@@ -9,7 +9,7 @@ import java.util.concurrent.TimeoutException;
 
 public class OneProducer {
 
-    private static final String QUEUE_NAME = "rabbit:mq01:quene:eug";
+    private static final String QUEUE_NAME = "rabbit:mq01:queue:eug";
 
     public static void main(String[] args) {
 
