@@ -25,6 +25,7 @@
     <modules>
         <module>hello-rabbit-mq</module>
         <module>fanout-exchange</module>
+        <module>direct-exchange</module>
     </modules>
 
 
