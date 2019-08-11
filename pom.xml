@@ -27,6 +27,7 @@
         <module>fanout-exchange</module>
         <module>direct-exchange</module>
         <module>topic-exchange</module>
+        <module>springboot-rabbit-mq</module>
     </modules>
 
 
