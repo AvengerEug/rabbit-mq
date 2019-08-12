@@ -57,6 +57,18 @@ mybatis:
 mq:
   env:local
 
+basic:
+  info:
+    mq:
+      exchange:
+        name: local:basic:info:mq:directExchange
+      routing:
+        key:
+          name: local:basic:info:mq:routing:key
+      queue:
+        name: local:basic:info:mq:queue
+
+
 
 
 

@@ -2,8 +2,7 @@ package com.eugene.sumarry.sbrabbitmq.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.amqp.core.AcknowledgeMode;
-import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -83,5 +82,18 @@ public class RabbitmqConfig {
     }
 
 
+    @Bean
+    public DirectExchange basicDirectExchange() {
+        return new DirectExchange(env.getProperty("basic.info.mq.exchange.name"), true, false);
+    }
 
+    @Bean
+    public Queue basicQueue() {
+        return new Queue(env.getProperty("basic.info.mq.queue.name"), true);
+    }
+
+    @Bean
+    public Binding bindingQueueWithExchange() {
+        return BindingBuilder.bind(basicQueue()).to(basicDirectExchange()).with(env.getProperty("basic.info.mq.routing.key.name"));
+    }
 }
