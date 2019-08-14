@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 /**
@@ -22,10 +23,13 @@ public class PushOrderRecordListener implements ApplicationListener<PushOrderRec
     private OrderRecordMapper orderRecordMapper;
 
     @Override
+    @Async
     public void onApplicationEvent(PushOrderRecordEvent event) {
         log.info("监听到的下单记录： {} ", event);
 
         try {
+            Thread.sleep(10000);
+            log.info("当前线程名: " + Thread.currentThread().getName());
             if (event != null) {
                 OrderRecord entity = new OrderRecord();
                 BeanUtils.copyProperties(event, entity);

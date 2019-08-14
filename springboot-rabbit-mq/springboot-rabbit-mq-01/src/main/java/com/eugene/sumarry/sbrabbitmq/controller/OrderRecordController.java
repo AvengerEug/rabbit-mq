@@ -31,6 +31,7 @@ public class OrderRecordController {
         BaseResponse response = new BaseResponse(StatusCode.Success);
 
         try {
+            log.info("当前线程名: " + Thread.currentThread().getName());
             PushOrderRecordEvent event = new PushOrderRecordEvent(this, "orderNo_20180821001", "物流12");
             publisher.publishEvent(event);
 

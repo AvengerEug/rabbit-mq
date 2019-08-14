@@ -9,6 +9,7 @@ import org.springframework.boot.web.servlet.support.SpringBootServletInitializer
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ImportResource;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 /**
  * @MapperScan注解 不使用dao impl实现类, 直接将启动时框架自动创建bean
@@ -17,6 +18,7 @@ import org.springframework.context.annotation.ImportResource;
 @MapperScan(basePackages = "com.eugene.sumarry.sbrabbitmq.mapper")
 @ImportResource(locations = {"classpath:spring/spring-jdbc.xml"})
 @EnableCaching
+@EnableAsync
 public class Application extends SpringBootServletInitializer {
 
     /**
