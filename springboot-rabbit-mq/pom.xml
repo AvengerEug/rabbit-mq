@@ -142,6 +142,7 @@
 
     <modules>
         <module>springboot-rabbit-mq-01</module>
+        <module>springboot-rabbit-mq-02</module>
     </modules>
 
 </project>

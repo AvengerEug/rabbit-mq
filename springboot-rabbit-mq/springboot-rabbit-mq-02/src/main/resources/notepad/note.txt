@@ -1,0 +1,11 @@
+1、大局上来讲：拿到下单记录数据->异步监听消费处理记录数据->塞入到数据库
+2、spring的事件驱动模型三大组件：ApplicationEvent，ApplicationListener，ApplicationEventPublisher
+3、“event绑定到一个listener”->一个event可以被绑定到多个listener
+
+
+1、配置单一跟多消费者
+2、RabbitmqTemplate发送组件配置 - 相当于ApplicationEventPublisher、rabbitmq客户端AmqpTemplate
+3、创建exchange,routingKey,queue并进行绑定
+
+
+1、rabbitmq消息模型核心思想：exchange+routingKey -> queue
