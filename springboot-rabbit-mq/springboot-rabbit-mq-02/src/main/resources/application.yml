@@ -45,8 +45,8 @@ logging:
     com:
       fasterxml:
         jackson: INFO
-      debug:
-        steadyjack: DEBUG
+      eugene:
+        sumarry: DEBUG # level节点下的 com.eugene.sumarry  => 表示在这个包下面的DEBUG级别的log会打印出来
 
 datasource:
   url: jdbc:mysql://127.0.0.1:3306/db_springboot?useUnicode=true&amp;characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull

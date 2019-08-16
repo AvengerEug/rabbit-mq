@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.eugene.sumarry.sbrabbitmq.mapper.ProductRobbingRecordMapper" >
-  <resultMap id="BaseResultMap" type="com.eugene.sumarry.sbrabbitmq.entity.ProductRobbingRecord" >
+  <resultMap id="BaseResultMap" type="ProductRobbingRecord" >
     <id column="id" property="id" jdbcType="INTEGER" />
     <result column="mobile" property="mobile" jdbcType="VARCHAR" />
     <result column="product_id" property="productId" jdbcType="INTEGER" />
@@ -21,13 +21,13 @@
     delete from product_robbing_record
     where id = #{id,jdbcType=INTEGER}
   </delete>
-  <insert id="insert" parameterType="com.eugene.sumarry.sbrabbitmq.entity.ProductRobbingRecord" >
+  <insert id="insert" parameterType="ProductRobbingRecord" >
     insert into product_robbing_record (id, mobile, product_id, 
       robbing_time, update_time)
     values (#{id,jdbcType=INTEGER}, #{mobile,jdbcType=VARCHAR}, #{productId,jdbcType=INTEGER}, 
       #{robbingTime,jdbcType=TIMESTAMP}, #{updateTime,jdbcType=TIMESTAMP})
   </insert>
-  <insert id="insertSelective" parameterType="com.eugene.sumarry.sbrabbitmq.entity.ProductRobbingRecord" >
+  <insert id="insertSelective" parameterType="ProductRobbingRecord" >
     insert into product_robbing_record
     <trim prefix="(" suffix=")" suffixOverrides="," >
       <if test="id != null" >
@@ -64,7 +64,7 @@
       </if>
     </trim>
   </insert>
-  <update id="updateByPrimaryKeySelective" parameterType="com.eugene.sumarry.sbrabbitmq.entity.ProductRobbingRecord" >
+  <update id="updateByPrimaryKeySelective" parameterType="ProductRobbingRecord" >
     update product_robbing_record
     <set >
       <if test="mobile != null" >
@@ -82,7 +82,7 @@
     </set>
     where id = #{id,jdbcType=INTEGER}
   </update>
-  <update id="updateByPrimaryKey" parameterType="com.eugene.sumarry.sbrabbitmq.entity.ProductRobbingRecord" >
+  <update id="updateByPrimaryKey" parameterType="ProductRobbingRecord" >
     update product_robbing_record
     set mobile = #{mobile,jdbcType=VARCHAR},
       product_id = #{productId,jdbcType=INTEGER},

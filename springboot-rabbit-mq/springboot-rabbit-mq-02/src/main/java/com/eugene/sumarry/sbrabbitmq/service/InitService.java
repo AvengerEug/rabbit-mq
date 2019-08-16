@@ -51,7 +51,8 @@ public class InitService {
 
                 mobile++;
 
-                log.info(String.valueOf(mobile));
+                // 抢单逻辑
+                concurrencyService.manageRobbing(String.valueOf(mobile));
             } catch (InterruptedException e) {
                 log.error("线程运行发生异常: ", e);
                 e.printStackTrace();

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.eugene.sumarry.sbrabbitmq.mapper.ProductMapper" >
-  <resultMap id="BaseResultMap" type="com.eugene.sumarry.sbrabbitmq.entity.Product" >
+  <resultMap id="BaseResultMap" type="Product" >
     <id column="id" property="id" jdbcType="INTEGER" />
     <result column="product_no" property="productNo" jdbcType="VARCHAR" />
     <result column="total" property="total" jdbcType="INTEGER" />
@@ -21,13 +21,13 @@
     delete from product
     where id = #{id,jdbcType=INTEGER}
   </delete>
-  <insert id="insert" parameterType="com.eugene.sumarry.sbrabbitmq.entity.Product" >
+  <insert id="insert" parameterType="Product" >
     insert into product (id, product_no, total, 
       create_time, update_time)
     values (#{id,jdbcType=INTEGER}, #{productNo,jdbcType=VARCHAR}, #{total,jdbcType=INTEGER}, 
       #{createTime,jdbcType=TIMESTAMP}, #{updateTime,jdbcType=TIMESTAMP})
   </insert>
-  <insert id="insertSelective" parameterType="com.eugene.sumarry.sbrabbitmq.entity.Product" >
+  <insert id="insertSelective" parameterType="Product" >
     insert into product
     <trim prefix="(" suffix=")" suffixOverrides="," >
       <if test="id != null" >
@@ -64,7 +64,7 @@
       </if>
     </trim>
   </insert>
-  <update id="updateByPrimaryKeySelective" parameterType="com.eugene.sumarry.sbrabbitmq.entity.Product" >
+  <update id="updateByPrimaryKeySelective" parameterType="Product" >
     update product
     <set >
       <if test="productNo != null" >
@@ -82,7 +82,7 @@
     </set>
     where id = #{id,jdbcType=INTEGER}
   </update>
-  <update id="updateByPrimaryKey" parameterType="com.eugene.sumarry.sbrabbitmq.entity.Product" >
+  <update id="updateByPrimaryKey" parameterType="Product" >
     update product
     set product_no = #{productNo,jdbcType=VARCHAR},
       total = #{total,jdbcType=INTEGER},
@@ -96,16 +96,12 @@
     UPDATE product a
     SET a.total = a.total - 1
     WHERE a.product_no = #{productNo}
-
-    AND a.total > 0
   </update>
 
   <!--根据产品号查询-->
-  <select id="selectByProductNo" resultType="com.eugene.sumarry.sbrabbitmq.entity.Product">
+  <select id="selectByProductNo" resultType="Product">
     SELECT <include refid="Base_Column_List"/>
     FROM product WHERE product_no=#{productNo}
-
-    AND total>0
   </select>
 
 </mapper>
