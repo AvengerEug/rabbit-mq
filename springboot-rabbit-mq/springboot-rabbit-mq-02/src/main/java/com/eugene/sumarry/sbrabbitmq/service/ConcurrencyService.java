@@ -1,6 +1,7 @@
 package com.eugene.sumarry.sbrabbitmq.service;
 
 import com.eugene.sumarry.sbrabbitmq.entity.Product;
+import com.eugene.sumarry.sbrabbitmq.entity.ProductRobbingRecord;
 import com.eugene.sumarry.sbrabbitmq.mapper.ProductMapper;
 import com.eugene.sumarry.sbrabbitmq.mapper.ProductRobbingRecordMapper;
 import org.slf4j.Logger;
@@ -34,8 +35,18 @@ public class ConcurrencyService {
         try {
             Product product = productMapper.selectByProductNo(productNo);
             if (product != null && product.getTotal() > 0) {
-                log.info("当前手机号：{} 恭喜您抢到单了!", mobile);
-                productMapper.updateTotal(product);
+                int result = productMapper.updateTotal(product);
+                if (result > 0) {
+                    log.info("当前手机号：{} 恭喜您抢到单了!", mobile);
+
+                    // 存抢单记录
+                    ProductRobbingRecord record = new ProductRobbingRecord();
+                    record.setMobile(mobile);
+                    record.setProductId(product.getId());
+                    productRobbingRecordMapper.insertSelective(record);
+                } else {
+                    log.error("当前手机号：{} 抢不到单!", mobile);
+                }
             } else {
                 log.error("当前手机号：{} 抢不到单!", mobile);
             }
