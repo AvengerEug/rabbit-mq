@@ -1,4 +1,4 @@
-package com.eugene.sumarry.sbrabbitmq.listener.event;
+package com.eugene.sumarry.sbrabbitmq.listerner.event;
 
 import org.springframework.context.ApplicationEvent;
 

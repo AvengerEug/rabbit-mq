@@ -21,6 +21,9 @@ public class InitService {
     @Autowired
     private ConcurrencyService concurrencyService;
 
+    @Autowired
+    private ConcurrencyRabbitMqService concurrencyRabbitMqService;
+
 
     public void generateMultiThread() {
         log.info("开始生成500个线程");
@@ -51,8 +54,12 @@ public class InitService {
 
                 mobile++;
 
-                // 抢单逻辑
-                concurrencyService.manageRobbing(String.valueOf(mobile));
+                // 抢单逻辑 v1.0
+                //concurrencyService.manageRobbing(String.valueOf(mobile));
+
+                // 抢单逻辑 v2.0, 使用rabbitMq限流
+                // 创建抢单消息队列, 由消息监听器去处理消息
+                concurrencyRabbitMqService.sendMessage(String.valueOf(mobile));
             } catch (InterruptedException e) {
                 log.error("线程运行发生异常: ", e);
                 e.printStackTrace();

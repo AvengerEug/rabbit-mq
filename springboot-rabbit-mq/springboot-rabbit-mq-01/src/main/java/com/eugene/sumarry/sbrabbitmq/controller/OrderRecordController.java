@@ -1,6 +1,6 @@
 package com.eugene.sumarry.sbrabbitmq.controller;
 
-import com.eugene.sumarry.sbrabbitmq.listener.event.PushOrderRecordEvent;
+import com.eugene.sumarry.sbrabbitmq.listerner.event.PushOrderRecordEvent;
 import com.eugene.sumarry.sbrabbitmq.response.BaseResponse;
 import com.eugene.sumarry.sbrabbitmq.response.StatusCode;
 import org.slf4j.Logger;
