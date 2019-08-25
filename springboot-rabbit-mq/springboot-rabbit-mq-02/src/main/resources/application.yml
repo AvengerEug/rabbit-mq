@@ -30,7 +30,7 @@ spring:
       simple:
         concurrency: 10
         max-concurrency: 20
-        prefetch: 50
+        prefetch: 5
 
 multipart:
   max-request-size: 20Mb
@@ -71,3 +71,11 @@ basic:
           name: ${mq.env}:basic:info:mq:routing:key
       queue:
         name: ${mq.env}:basic:info:mq:queue
+    simpleMq:
+      queue:
+        name: ${mq.env}:simple:queue
+      exchange:
+        name: ${mq.env}:simple:topicExchange
+      routing:
+        key:
+          name: ${mq.env}:simple:routing:key

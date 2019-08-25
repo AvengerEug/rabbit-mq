@@ -1,14 +1,18 @@
 package com.eugene.sumarry.sbrabbitmq.config;
 
+import com.eugene.sumarry.sbrabbitmq.listerner.SimpleMqListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.amqp.rabbit.support.CorrelationData;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.amqp.SimpleRabbitListenerContainerFactoryConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -96,4 +100,76 @@ public class RabbitmqConfig {
     public Binding bindingQueueWithExchange() {
         return BindingBuilder.bind(basicQueue()).to(basicDirectExchange()).with(env.getProperty("basic.info.mq.routing.key.name"));
     }
+
+
+
+    // 并发10个, 所以在rabbitmq中有10个channel相当于10个消费者
+    @Value("${spring.rabbitmq.listener.simple.concurrency}")
+    private Integer simpleConcurrency;
+
+    @Value("${spring.rabbitmq.listener.simple.max-concurrency}")
+    private Integer maxConcurrency;
+
+    @Value("${spring.rabbitmq.listener.simple.prefetch}")
+    private Integer prefetch;
+
+    @Value("${basic.info.simpleMq.queue.name}")
+    private String simpleContainerQueueName;
+
+    @Value("${basic.info.simpleMq.exchange.name}")
+    private String simpleContainerTopicExchangeName;
+
+    @Value("${basic.info.simpleMq.routing.key.name}")
+    private String simpleContainerTopicExchangeRoutingKeyName;
+
+    @Autowired
+    private SimpleMqListener simpleMqListener;
+
+    /**
+     * 配置simpleContainer的队列
+     */
+    @Bean(value = "simpleContainerQueue")
+    public Queue simpleContainerQueue() {
+        return new Queue(simpleContainerQueueName, true);
+    }
+
+    @Bean(value = "simpleContainerTopicExchange")
+    public TopicExchange simpleContainerTopicExchange() {
+        return new TopicExchange(simpleContainerTopicExchangeName, true, false);
+    }
+
+    /**
+     * 将队列绑定到exchange上, 采用某种routing key
+     * @return
+     */
+    @Bean
+    public Binding bindingSimpleContainer() {
+        return BindingBuilder.bind(simpleContainerQueue()).to(simpleContainerTopicExchange()).with(simpleContainerTopicExchangeRoutingKeyName);
+    }
+
+    /**
+     * 配置高并发mq容器: SimpleMessageListenerContainer
+     * 1. 配置并发
+     * 2. 消息确认机制
+     */
+    @Bean(value = "simpleContainer")
+    public SimpleMessageListenerContainer simpleContainer(@Qualifier(value = "simpleContainerQueue" ) Queue simpleContainerQueue) {
+        SimpleMessageListenerContainer simpleContainer = new SimpleMessageListenerContainer();
+
+        // 每一个mq容器都需要跟连接工厂进行绑定
+        simpleContainer.setConnectionFactory(connectionFactory);
+
+        // 并发的配置, 配置消费者的数量
+        simpleContainer.setConcurrentConsumers(simpleConcurrency);
+        simpleContainer.setMaxConcurrentConsumers(maxConcurrency);
+        simpleContainer.setPrefetchCount(prefetch);
+
+        // 配置消息确认机制: 手动 AcknowledgeMode: NONE, MANUAL, AUTH,
+        simpleContainer.setAcknowledgeMode(AcknowledgeMode.MANUAL);
+        simpleContainer.setQueues(simpleContainerQueue);
+        simpleContainer.setMessageListener(simpleMqListener);
+
+        return simpleContainer;
+    }
+
 }
