@@ -44,11 +44,6 @@ logging:
       debug:
         steadyjack: DEBUG
 
-datasource:
-  url: jdbc:mysql://127.0.0.1:3306/db_springboot?useUnicode=true&amp;characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull
-  username: root
-  password:
-
 mybatis:
   config-location: classpath:mybatis-config.xml
   checkConfigLocation: true

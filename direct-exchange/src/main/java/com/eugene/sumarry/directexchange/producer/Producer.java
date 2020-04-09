@@ -22,7 +22,7 @@ public class Producer {
             // 4. 定义directExchange交换机
             channel.exchangeDeclare(Constants.DIRECT_EXCHANGE_NAME, BuiltinExchangeType.DIRECT);
 
-            // 5. 定义成功、失败队列
+            // 5. 定义成功、失败队列AS
             channel.queueDeclare(Constants.SUCCESS_QUEUE, true, false, false, null);
             channel.queueDeclare(Constants.FAILED_QUEUE, true, false, false, null);
 

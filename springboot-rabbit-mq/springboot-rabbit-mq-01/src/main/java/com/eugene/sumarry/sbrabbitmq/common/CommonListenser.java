@@ -33,7 +33,6 @@ public class CommonListenser {
         try {
             // 获取普通String类型消息
             logger.info("接收的字符串消息: " + new String(message, "UTF-8"));
-
             // 获取map消息
             //Map<String, Object> map = objectMapper.readValue(message, Map.class);
             //logger.info("接收的map消息, map: " + map );
