@@ -31,3 +31,5 @@
 ### 2.5 注意
 
 * 所有的`Routing Key`必须要使用`.`隔开。是Rabbit mq的规范。
+
+## 三、Spring Boot集成rabbit mq流程
