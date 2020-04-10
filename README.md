@@ -33,3 +33,153 @@
 * 所有的`Routing Key`必须要使用`.`隔开。是Rabbit mq的规范。
 
 ## 三、Spring Boot集成rabbit mq流程
+
+### 3.1 创建队列 queue
+
+* 直接创建一个`org.springframework.amqp.core.Queue`类型的bean即可
+
+### 3.2 创建交换机exchange
+
+* 直接创建一个对应类型的exchange即可。
+
+  ```txt
+  eg: spring-amqp jar包中包含了如下exchange:
+  1. org.springframework.amqp.core.TopicExchange
+  2. org.springframework.amqp.core.DirectExchange
+  3. org.springframework.amqp.core.FanoutExchange
+  4. org.springframework.amqp.core.HeadersExchange
+  ```
+
+  或者使用`ExchangeBuilder`也可以创建一个exchange，采用build语法, 如下:
+
+  ```java
+  (TopicExchange) ExchangeBuilder.topicExchange("topicExchangeName").withArgument("参数key", "value").build();
+  ```
+
+### 3.3 将绑定交换机、队列和routing key
+
+* 使用提供的`Binding`对象即可，如下:
+
+  ```java
+  BindingBuilder.bind(绑定的队列).to(交换机).with(绑定的key);
+  // 大致的语法就是将队列绑定到交换机中并监听具体的key
+  ```
+
+### 3.4 RabbitTemplate
+
+* 在springboot集成rabbit mq的过程中，**RabbitTemplate**的主要作用就是和rabbit mq链接，后续将使用它来发送消息。具体语法如下:
+
+  ```java
+  rabbitTemplate.convertAndSend("topic名字", "routingKey", "传递的消息");
+  // 通过这行代码，rabbitTemplate就能知道将消息发送到哪个交换机上，然后交换机就能根据自己的特性，将routingKey将消息发送给符合条件的队列
+  ```
+
+### 3.5 使用@RabbitListener指定消费者手动确认消息
+
+* 注解添加listenter参数，eg如下:
+
+  ```java
+  /**
+   * messageErrorHandler为一个实现了RabbitListenerErrorHandler接口的消息发生异常的处理器的名字(是一个bean)
+   * simpleRabbitListenerContainerFactory是一个实现了RabbitListenerContainerFactory接口的消费者容器工厂
+   * (它是一个bean，并且内部设置了消息确认模式为手动
+  **/
+  @RabbitListener(
+      queues = Constants.ORDER_QUEUE_NAME,
+      errorHandler = "messageErrorHandler",
+      containerFactory = "simpleRabbitListenerContainerFactory"
+  )	
+  ```
+
+* name为messageErrorHandler的bean
+
+  ```java
+  @Component
+  public class MessageErrorHandler implements RabbitListenerErrorHandler {
+  
+      private static final Logger logger = LoggerFactory.getLogger(MessageErrorHandler.class);
+  
+      @Override
+      public Object handleError(Message amqpMessage, org.springframework.messaging.Message<?> message, ListenerExecutionFailedException exception) throws Exception {
+          logger.warn("处理消息异常, 异常消息为: {}, 异常信息为: ", amqpMessage, exception);
+          logger.info("可以在此处对消息进行持久化存入db，并使用job定时去消费");
+  
+          return null;
+      }
+  }
+  ```
+
+* name为
+
+  ```java
+  @Bean
+  public SimpleRabbitListenerContainerFactory simpleRabbitListenerContainerFactory() {
+      SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+      factory.setConnectionFactory(connectionFactory());
+      factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);
+      return factory;
+  }
+  ```
+
+### 3.6 注意事项
+
+* rabbitTemplate能够直接与rabbit服务端进行交互，直接使用**convertAndSend**方法就能实现消息发送
+
+* 使用`@RabbitListener`注解即可实现消息消费，但要指定消费的队列。
+
+  ```txt
+  这里有点想吐槽，它的@RabbitListener注解压根没有@Inherited修饰，都无法对它进行扩展。
+  ```
+
+## 四、引入消息中间件可能出现的问题
+
+### 4.1 发送消息时，消息中间件挂了，导致消息没有正常发送
+
+* 有可能用户在下单完成后，触发了发送消息的步骤。但是有可能在刚好发消息的时候，消息中间件挂了，导致消息没有发送出去
+
+* 可能出现的问题方向：
+
+  1. 要确认消息发送到交换机 过程中失败(eg: 消息发送的过程中，项目挂了或者rabbitmq挂了)
+  2. 交换机将消息发送至队列 过程中失败(eg: message对应的key没有队列能绑定)
+
+* 解决方案: 
+
+  1. 针对方向1：在将消息发送至交换机时，rabbit mq会进行一次回调  ---- `发送方确认`
+  2. 针对方向2：在交换机将消息推送给队列失败时，rabbit mq也会进行回调  ---- `失败回调`
+
+* 实践: 
+
+  1. 针对方向1：
+
+     ```txt
+     1. 连接工厂要开启发送方确认模式: cachingConnectionFactory.setPublisherConfirms(true)
+     2. rabbitmqTemplate提供发送消息的回调: 
+     	rabbitTemplate.setConfirmCallback((correlationData, ack, cause) -> {
+             // 第一个参数: 是生产消息是传入的CorrelationData对象，里面维护了一个id，可以自定义取值来标识某些业务
+             // 第二个参数: 判断消息有没有发成功
+             // 第三个参数: 发生异常的原因，cause为异常的原因
+             System.out.println("123");
+         });
+     ```
+
+  2. 针对方向2:
+
+     ```txt
+     1. 同上，需要设置发送方确认模式
+     2. 设置允许失败回调: rabbitTemplate.setMandatory(true);
+     3. 设置失败回调函数:
+         rabbitTemplate.setReturnCallback((message, replyCode, replyText, exchange, routingKey) -> {
+             // 第一个参数: message -> 消息主体
+             // 第二个参数:
+             // 第三个参数:
+             // 第四个参数: 发送的交换机名字
+             // 第五个参数: 发送消息的routingKey
+             System.out.println(message);
+             System.out.println(replyCode);
+             System.out.println(replyText);
+             System.out.println(exchange);
+             System.out.println(routingKey);
+         });
+     ```
+
+* 综上所述，一个消息发生成功需要这两个回调中都没发生异常(发送成功的情况下，第二个方向中的回调不会进入)
