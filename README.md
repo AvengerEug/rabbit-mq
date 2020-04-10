@@ -183,3 +183,53 @@
      ```
 
 * 综上所述，一个消息发生成功需要这两个回调中都没发生异常(发送成功的情况下，第二个方向中的回调不会进入)
+
+### 4.2 spring-amqp中自带的消息转换器
+
+* 在`spring-amqp`中，spring会使用反射调用@RabbitListener注解标识的方法。当我们的参数中存在一个String类型的参数时，spring会认为这是想要注入的消息内容。最后会自己执行一套逻辑来注入这个参数(**使用消息转换器**)，具体逻辑如下: 
+
+  ```java
+  // SimpleMessageConverter.java
+  public Object fromMessage(Message message) throws MessageConversionException {
+      Object content = null;
+      // 拿到消息的MessageProperties对象
+      MessageProperties properties = message.getMessageProperties();
+      if (properties != null) {
+          String contentType = properties.getContentType();
+          // 判断消息的ContentType类型是否为text打头，eg: text/html, text/xml等等
+          if (contentType != null && contentType.startsWith("text")) {
+              // 拿到消息内部的编码格式，我们可以指定格式。eg: UTF-8, GBK等等
+              String encoding = properties.getContentEncoding();
+              if (encoding == null) {
+                  // 默认为utf-8
+                  encoding = this.defaultCharset;
+              }
+              try {
+                  // 最终使用编码格式进行编码
+                  content = new String(message.getBody(), encoding);
+              }
+              catch (UnsupportedEncodingException e) {
+                  throw new MessageConversionException(
+                      "failed to convert text-based Message content", e);
+              }
+          }
+          else if (contentType != null &&
+                   contentType.equals(MessageProperties.CONTENT_TYPE_SERIALIZED_OBJECT)) {
+              try {
+                  content = SerializationUtils.deserialize(
+                      createObjectInputStream(new ByteArrayInputStream(message.getBody()), this.codebaseUrl));
+              }
+              catch (IOException | IllegalArgumentException | IllegalStateException e) {
+                  throw new MessageConversionException(
+                      "failed to convert serialized Message content", e);
+              }
+          }
+      }
+      if (content == null) {
+          content = message.getBody();
+      }
+      return content;
+  }
+  ```
+
+* 通过看了部分源码，大致知道了spring在消费rabbitmq消息时的处理，可以在rabbitmqTemplate中添加指定的消息转换器，其中包含，发送消息时的转换器回调以及接收消息时的转换器回调

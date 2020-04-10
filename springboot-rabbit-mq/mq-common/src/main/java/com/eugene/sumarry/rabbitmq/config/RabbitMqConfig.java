@@ -1,5 +1,6 @@
 package com.eugene.sumarry.rabbitmq.config;
 
+import com.alibaba.fastjson.JSON;
 import com.eugene.sumarry.rabbitmq.common.Constants;
 import com.rabbitmq.client.Channel;
 import org.springframework.amqp.core.*;
@@ -7,6 +8,9 @@ import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFacto
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.MessageConversionException;
+import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.boot.json.JsonParser;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -19,7 +23,7 @@ public class RabbitMqConfig {
         cachingConnectionFactory.setVirtualHost("/eugene");
         cachingConnectionFactory.setUsername("guest");
         cachingConnectionFactory.setPassword("guest");
-        cachingConnectionFactory.setHost("192.168.111.145");
+        cachingConnectionFactory.setHost("127.0.0.1");
         cachingConnectionFactory.setPublisherConfirms(true);
         return cachingConnectionFactory;
     }
@@ -62,6 +66,23 @@ public class RabbitMqConfig {
             System.out.println(replyText);
             System.out.println(exchange);
             System.out.println(routingKey);
+        });
+
+        rabbitTemplate.setMessageConverter(new MessageConverter() {
+            @Override
+            public Message toMessage(Object object, MessageProperties messageProperties) throws MessageConversionException {
+                // 指定发送的消息类型为test/plain
+                messageProperties.setContentType("text/plain");
+                // 指定消息的编码格式
+                messageProperties.setContentEncoding("UTF-8");
+                Message message = new Message(JSON.toJSONBytes(object), messageProperties);
+                return message;
+            }
+
+            @Override
+            public Object fromMessage(Message message) throws MessageConversionException {
+                return message;
+            }
         });
 
         return rabbitTemplate;
