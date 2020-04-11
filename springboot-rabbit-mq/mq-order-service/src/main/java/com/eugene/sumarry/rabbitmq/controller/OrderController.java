@@ -34,7 +34,7 @@ public class OrderController {
         // 第二个参数: 当前这条消息的key
         // 第三个参数: 传递的信息
         CorrelationData correlationData = new CorrelationData("业务编号");
-        rabbitTemplate.convertAndSend(Constants.TOPIC_EXCHANGE, Constants.ORDER_CREATE_ROUTING_KEY, JSON.toJSONString(map), correlationData);
+        rabbitTemplate.convertAndSend(Constants.TOPIC_EXCHANGE, 123 + Constants.ORDER_CREATE_ROUTING_KEY, JSON.toJSONString(map), correlationData);
         logger.info("下单成功");
     }
 }

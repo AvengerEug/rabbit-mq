@@ -82,7 +82,7 @@
   /**
    * messageErrorHandler为一个实现了RabbitListenerErrorHandler接口的消息发生异常的处理器的名字(是一个bean)
    * simpleRabbitListenerContainerFactory是一个实现了RabbitListenerContainerFactory接口的消费者容器工厂
-   * (它是一个bean，并且内部设置了消息确认模式为手动
+   * (它是一个bean，并且内部设置了消息确认模式为手动)
   **/
   @RabbitListener(
       queues = Constants.ORDER_QUEUE_NAME,
@@ -91,7 +91,7 @@
   )	
   ```
 
-* name为messageErrorHandler的bean
+* name为**messageErrorHandler**的bean
 
   ```java
   @Component
@@ -109,7 +109,7 @@
   }
   ```
 
-* name为
+* name为**simpleRabbitListenerContainerFactory**的bean
 
   ```java
   @Bean
@@ -130,6 +130,8 @@
   ```txt
   这里有点想吐槽，它的@RabbitListener注解压根没有@Inherited修饰，都无法对它进行扩展。
   ```
+  
+* 若消费者在消费消息的时候，并未手动确认或者拒绝消息，那么这条消息就会一直在`unacked`状态。要么消费者确认消息完成消费，要么消费者拒绝消息让消息回到队列，或者消费者与rabbitmq断开链接后消息自动回到队列
 
 ## 四、引入消息中间件可能出现的问题
 
@@ -233,3 +235,114 @@
   ```
 
 * 通过看了部分源码，大致知道了spring在消费rabbitmq消息时的处理，可以在rabbitmqTemplate中添加指定的消息转换器，其中包含，发送消息时的转换器回调以及接收消息时的转换器回调
+
+### 4.3 备用交换机
+
+* 一个消息发送失败的原因可以是**未将消息发送至交换机**、**交换机未绑定队列或者路由失败**
+
+  对应的场景就是: 
+
+  ```txt
+  1. 发送消息时rabbitmq挂了或者自己的应用程序挂了，导致消息发送失败
+  2. 发送消息时指定的交换机路由指定key时失败，即与指定交换机绑定的队列中不支持指定key
+  ```
+
+* 为了解决消息发送的成功率，可以添加一个类型为**fanout**备用交换机, 并且将之与指定队列绑定。这样的话就基本上能保证消息发送的成功率了。模型大概就是: **两个交换机绑定同一个队列，消费者消费队列的消息**
+
+* 具体代码如下:
+
+  ```java
+  @Bean
+  public TopicExchange topicExchange() {
+      Map<String, Object> map = new HashMap<>();
+      map.put("alternate-exchange", "defaultExchange");
+      return (TopicExchange) ExchangeBuilder.topicExchange(Constants.TOPIC_EXCHANGE).withArguments(map).build();
+  }
+  
+  @Bean(Constants.ORDER_QUEUE_NAME)
+  public Queue queue() {
+      return new Queue(Constants.ORDER_QUEUE_NAME);
+  }
+  
+  @Bean
+  public Binding binding() {
+      // 将队列和routing key绑定至exchange中, RoutingKey为: order.#
+      return BindingBuilder.bind(queue()).to(topicExchange()).with(Constants.ORDER_SERVICE_MATCH_PREFIX_ROUTING_KEY);
+  }
+  
+  @Bean
+  public FanoutExchange defaultExchange() {
+      return (FanoutExchange) ExchangeBuilder.fanoutExchange(Constants.DEFAULT_EXCHANGE).build();
+  }
+  
+  @Bean
+  public Binding defaultExchangeBinding() {
+      return BindingBuilder.bind(queue()).to(defaultExchange());
+  }
+  ```
+
+  当使用如下代码
+
+  ```java
+  // routingKey为123order.create
+  rabbitTemplate.convertAndSend(Constants.TOPIC_EXCHANGE, 123 + Constants.ORDER_CREATE_ROUTING_KEY, JSON.toJSONString(map), correlationData);
+  ```
+
+  消息会发送成功，但是是通过默认的`fanout`交换机发送成功了。
+
+* 注意: 若交换机已存在且修改了它的属性，会报如下错误:
+
+  ```java
+  reply-code=406, reply-text=PRECONDITION_FAILED - inequivalent arg 'alternate-exchange' for exchange 'topicExchange' in vhost '/eugene': received the value 'defaultExchange' of type 'longstr' but current is none, class-id=40, method-id=10
+  ```
+
+  解决方案是: 将交换机删掉，或者重新新建一个新的
+
+  其他注意事项:
+
+  1. 使用备用交换机的话，在rabbitTemplate中配置的两个失败回调要主交换机和备用交换机都失败后才会回调。
+
+  ---
+
+## 五、消息预取
+
+### 5.1  背景
+
+* 为什么需要消息预取？
+
+  ```txt
+  对于Rabbitmq，它发送消息的机制为轮询，且一次性全部发完。如果消息量比极少还没关系，若消息量非常多，那么客户端维护受得了。于是，我们期望rabbit在往消费者发送消息时，等消息消费完了再发送下一条。这就是消息预取
+  ```
+
+* 如何实现?
+
+  ```
+  客户端在channel中设置如下配置: channel.basicQos(1);
+  表示rabbitmq中一次只往消费者客户端发送1条消息，待消息确认消费完后再发送第二条
+  所以推送多少条消息由消费者来决定
+  
+  --> 所以会存在这样的一个定律:
+    性能越高的消费者，预取的消息越多，可靠性就越低
+    
+    但预取的数量有上限，最高2500.再往上走，性能也不会提高。
+    中间值为500. 这样的话，性能和可靠性基本上持平
+  ```
+
+  `注意:使用消息预取功能的话，我们必须要将消息确认模式为手动确认`
+
+* 带来的问题(消息可靠性和幂等性):
+
+  ```txt
+  假设某个消费者预取了20条消息，在执行19条消息的时候，消费者挂了。此时这20条消息会重回队列进入 ready 状态。这样的话，可能会存在消息重复消费的问题(因为是预取，所以会采用批量确认消息机制，即当20条消息都完成了才进行确认消息操作)。
+  所以存在消息幂等问题, 如何解决呢？
+  => 每次消费的时候，若消费完成就使用往redis中key对应为rabbitMq的set数据结构中添加当前消息对应的deliveryId
+  因为set的唯一特性，当set成功则表示消费完成，若set失败，则表示此消息已经被消费完成了。最后再使用定时任务在某一个时间点同步redis中的数据至db中
+  ```
+
+* 消息预取与幂等性实战:
+
+  ```
+  
+  ```
+
+  

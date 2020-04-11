@@ -14,6 +14,9 @@ import org.springframework.boot.json.JsonParser;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Configuration
 public class RabbitMqConfig {
 
@@ -23,7 +26,7 @@ public class RabbitMqConfig {
         cachingConnectionFactory.setVirtualHost("/eugene");
         cachingConnectionFactory.setUsername("guest");
         cachingConnectionFactory.setPassword("guest");
-        cachingConnectionFactory.setHost("127.0.0.1");
+        cachingConnectionFactory.setHost("192.168.111.145");
         cachingConnectionFactory.setPublisherConfirms(true);
         return cachingConnectionFactory;
     }
@@ -37,6 +40,8 @@ public class RabbitMqConfig {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory());
         factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);
+        // 配置rabbit每次发送指定数量的消息给对应的消费者
+        factory.setPrefetchCount(2500);
         return factory;
     }
 
@@ -90,7 +95,9 @@ public class RabbitMqConfig {
 
     @Bean
     public TopicExchange topicExchange() {
-        return (TopicExchange) ExchangeBuilder.topicExchange(Constants.TOPIC_EXCHANGE).withArgument("", "").build();
+        Map<String, Object> map = new HashMap<>();
+        map.put("alternate-exchange", "defaultExchange");
+        return (TopicExchange) ExchangeBuilder.topicExchange(Constants.TOPIC_EXCHANGE).withArguments(map).build();
     }
 
     @Bean(Constants.ORDER_QUEUE_NAME)
@@ -103,4 +110,15 @@ public class RabbitMqConfig {
         // 将队列和routing key绑定至exchange中
         return BindingBuilder.bind(queue()).to(topicExchange()).with(Constants.ORDER_SERVICE_MATCH_PREFIX_ROUTING_KEY);
     }
+
+    @Bean
+    public FanoutExchange defaultExchange() {
+        return (FanoutExchange) ExchangeBuilder.fanoutExchange(Constants.DEFAULT_EXCHANGE).build();
+    }
+
+    @Bean
+    public Binding defaultExchangeBinding() {
+        return BindingBuilder.bind(queue()).to(defaultExchange());
+    }
+
 }

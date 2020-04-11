@@ -31,7 +31,25 @@ public class GoodsController {
         logger.info("消费者收到{}队列的消息, Message对象", Constants.ORDER_QUEUE_NAME, message);
         logger.warn("消息内容如下: {}", content);
         // 确认消费完成
-        channel.basicAck(deliveryTag, false);
+        if (true) {
+            channel.basicAck(deliveryTag, false);
+        } else {
+            // 批量撤回
+            // 第一个参数: 消息对应的tag
+            // 第二个参数: 是否批量撤回
+            // 第三个参数: 是否重回队列
+            channel.basicNack(deliveryTag, false, true);
+
+            // 单条撤回
+            // 第一个参数: 消息对应detag
+            // 第二个参数: 是否重回队列
+            //channel.basicReject(deliveryTag, true);
+
+            // 这种情况下，
+            // 1. 可以把消息存入db，项目中的定时任务来执行
+            // 2. 获取使用多个消费者同时消费一个队列，在rabbitmq将消息分发给消费者时
+            //    采用的时轮询机制
+        }
         System.out.println("decrementCont");
     }
 

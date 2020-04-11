@@ -10,4 +10,6 @@ public interface Constants {
 
     String TOPIC_EXCHANGE = "topicExchange";
 
+    String DEFAULT_EXCHANGE = "defaultExchange";
+
 }
