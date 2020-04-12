@@ -2,7 +2,6 @@ package com.eugene.sumarry.rabbitmq.config;
 
 import com.alibaba.fastjson.JSON;
 import com.eugene.sumarry.rabbitmq.common.Constants;
-import com.rabbitmq.client.Channel;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
@@ -10,9 +9,9 @@ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.MessageConversionException;
 import org.springframework.amqp.support.converter.MessageConverter;
-import org.springframework.boot.json.JsonParser;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import redis.clients.jedis.Jedis;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -73,6 +72,7 @@ public class RabbitMqConfig {
             System.out.println(routingKey);
         });
 
+        // 自己实现了一个消息转换器
         rabbitTemplate.setMessageConverter(new MessageConverter() {
             @Override
             public Message toMessage(Object object, MessageProperties messageProperties) throws MessageConversionException {
@@ -111,6 +111,10 @@ public class RabbitMqConfig {
         return BindingBuilder.bind(queue()).to(topicExchange()).with(Constants.ORDER_SERVICE_MATCH_PREFIX_ROUTING_KEY);
     }
 
+    /**
+     * 备用交换机配置，因要测试消息预取，所以注释此段代码
+     * @return
+     */
     @Bean
     public FanoutExchange defaultExchange() {
         return (FanoutExchange) ExchangeBuilder.fanoutExchange(Constants.DEFAULT_EXCHANGE).build();
@@ -120,5 +124,27 @@ public class RabbitMqConfig {
     public Binding defaultExchangeBinding() {
         return BindingBuilder.bind(queue()).to(defaultExchange());
     }
+
+    // ---------------------------预取消息测试---------------------------
+    @Bean
+    public Jedis jedis() {
+        return new Jedis("192.168.111.145", 6379);
+    }
+
+    @Bean
+    public TopicExchange preFetchTopicExchange() {
+        return (TopicExchange) ExchangeBuilder.topicExchange(Constants.PRE_FETCH_EXCHANGE).build();
+    }
+
+    @Bean
+    public Queue preFetchQueue() {
+        return new Queue(Constants.PRE_FETCH_QUEUE_NAME);
+    }
+
+    @Bean
+    public Binding preFetchBinding() {
+        return BindingBuilder.bind(preFetchQueue()).to(preFetchTopicExchange()).with(Constants.PRE_FETCH_ROUTING_KEY);
+    }
+
 
 }

@@ -37,4 +37,18 @@ public class OrderController {
         rabbitTemplate.convertAndSend(Constants.TOPIC_EXCHANGE, 123 + Constants.ORDER_CREATE_ROUTING_KEY, JSON.toJSONString(map), correlationData);
         logger.info("下单成功");
     }
+
+    public void createOrder() {
+
+        Map<String, Object> map = new HashMap<>();
+
+        logger.debug("创建下订单消息");
+        for (int i = 1; i <= 2400; i++) {
+            map.put("userId", i);
+            map.put("orderId", i);
+            rabbitTemplate.convertAndSend(Constants.PRE_FETCH_EXCHANGE, Constants.PRE_FETCH_ROUTING_KEY, map, new CorrelationData("业务编号" + i));
+        }
+
+        logger.info("{}笔订单下单成功", 20000);
+    }
 }

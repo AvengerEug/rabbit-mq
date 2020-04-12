@@ -12,4 +12,11 @@ public interface Constants {
 
     String DEFAULT_EXCHANGE = "defaultExchange";
 
+    // -------------------------------------------------
+
+    String PRE_FETCH_EXCHANGE = "preFetchTopicExchange";
+
+    String PRE_FETCH_QUEUE_NAME = "preFetchQueueName";
+
+    String PRE_FETCH_ROUTING_KEY = "preFetchRoutingKey";
 }

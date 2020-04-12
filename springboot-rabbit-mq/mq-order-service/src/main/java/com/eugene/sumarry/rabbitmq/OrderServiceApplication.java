@@ -11,6 +11,8 @@ public class OrderServiceApplication {
     public static void main(String[] args) {
         ConfigurableApplicationContext context = SpringApplication.run(OrderServiceApplication.class);
 
-        context.getBean(OrderController.class).createOrder(10054L);
+        // context.getBean(OrderController.class).createOrder(10054L);
+
+        context.getBean(OrderController.class).createOrder();
     }
 }
