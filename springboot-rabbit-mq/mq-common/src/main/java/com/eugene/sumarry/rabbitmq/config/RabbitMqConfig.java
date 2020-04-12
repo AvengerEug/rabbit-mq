@@ -96,7 +96,7 @@ public class RabbitMqConfig {
     @Bean
     public TopicExchange topicExchange() {
         Map<String, Object> map = new HashMap<>();
-        map.put("alternate-exchange", "defaultExchange");
+        map.put("alternate-exchange", Constants.DEFAULT_EXCHANGE);
         return (TopicExchange) ExchangeBuilder.topicExchange(Constants.TOPIC_EXCHANGE).withArguments(map).build();
     }
 
@@ -125,25 +125,84 @@ public class RabbitMqConfig {
         return BindingBuilder.bind(queue()).to(defaultExchange());
     }
 
-    // ---------------------------预取消息测试---------------------------
+    // ---------------------------预取消息相关---------------------------
     @Bean
     public Jedis jedis() {
         return new Jedis("192.168.111.145", 6379);
     }
 
+    /**
+     * 新建一个预取消息的topic交换机
+     * @return
+     */
     @Bean
     public TopicExchange preFetchTopicExchange() {
         return (TopicExchange) ExchangeBuilder.topicExchange(Constants.PRE_FETCH_EXCHANGE).build();
     }
 
+    /**
+     * 新建一个预取消息对应的队列
+     * @return
+     */
     @Bean
     public Queue preFetchQueue() {
-        return new Queue(Constants.PRE_FETCH_QUEUE_NAME);
+        return QueueBuilder.durable(Constants.PRE_FETCH_QUEUE_NAME).build();
     }
 
+    /**
+     * 将预取消息队列与交换机进行绑定，并且监听的routingKey为preFetchRoutingKey
+     * @return
+     */
     @Bean
     public Binding preFetchBinding() {
         return BindingBuilder.bind(preFetchQueue()).to(preFetchTopicExchange()).with(Constants.PRE_FETCH_ROUTING_KEY);
+    }
+
+    // -------------------死信队列相关
+
+    /**
+     * 死信队列: direct类型的交换机
+     * @return
+     */
+    @Bean
+    public DirectExchange basicQueueDeadLatterExchange() {
+        return (DirectExchange) ExchangeBuilder.directExchange(Constants.BASIC_QUEUE_DEAD_LETTER_EXCHANGE).build();
+    }
+
+    /**
+     * 死信队列: 与死信交换机绑定的队列
+     * @return
+     */
+    @Bean
+    public Queue basicQueueDeadLetterQueue() {
+        return QueueBuilder.durable(Constants.BASIC_QUEUE_DEAD_LETTER_QUEUE).build();
+    }
+
+    /**
+     * 绑定死信交换机与队列，并队列监听的routingKey为preFetchDeadLetterRoutingKey
+     * @return
+     */
+    @Bean
+    public Binding basicQueueDeadLetterBinding() {
+        return BindingBuilder.bind(basicQueueDeadLetterQueue()).to(basicQueueDeadLatterExchange()).with(Constants.BASIC_QUEUE_DEAD_LETTER_ROUTING_KEY);
+    }
+
+    @Bean
+    public Queue basicQueue() {
+        Map<String, Object> params = new HashMap<>();
+        params.put("x-dead-letter-exchange", Constants.BASIC_QUEUE_DEAD_LETTER_EXCHANGE);
+        params.put("x-dead-letter-routing-key", Constants.BASIC_QUEUE_DEAD_LETTER_ROUTING_KEY);
+        return QueueBuilder.durable(Constants.BASIC_QUEUE).withArguments(params).build();
+    }
+
+    @Bean
+    public TopicExchange basicExchange() {
+        return (TopicExchange) ExchangeBuilder.topicExchange(Constants.BASIC_QUEUE_EXCHANGE).build();
+    }
+
+    @Bean
+    public Binding basicBinding() {
+        return BindingBuilder.bind(basicQueue()).to(basicExchange()).with(Constants.BASIC_QUEUE_ROUTING_KEY);
     }
 
 

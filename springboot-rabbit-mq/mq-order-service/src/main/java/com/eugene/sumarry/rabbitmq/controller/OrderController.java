@@ -49,6 +49,20 @@ public class OrderController {
             rabbitTemplate.convertAndSend(Constants.PRE_FETCH_EXCHANGE, Constants.PRE_FETCH_ROUTING_KEY, map, new CorrelationData("业务编号" + i));
         }
 
-        logger.info("{}笔订单下单成功", 20000);
+        logger.info("{}笔订单下单成功", 2400);
+    }
+
+
+    public void createBasicQueueMessage() {
+        Map<String, Object> map = new HashMap<>();
+
+        logger.debug("创建下订单消息");
+        for (int i = 1; i <= 100; i++) {
+            map.put("userId", i);
+            map.put("orderId", i);
+            rabbitTemplate.convertAndSend(Constants.BASIC_QUEUE_EXCHANGE, Constants.BASIC_QUEUE_ROUTING_KEY, map, new CorrelationData("业务编号" + i));
+        }
+
+        logger.info("{}笔订单下单成功", 100);
     }
 }

@@ -19,4 +19,18 @@ public interface Constants {
     String PRE_FETCH_QUEUE_NAME = "preFetchQueueName";
 
     String PRE_FETCH_ROUTING_KEY = "preFetchRoutingKey";
+
+
+    // ----------------BASIC QUEUE
+    String BASIC_QUEUE_EXCHANGE = "basicExchange";
+
+    String BASIC_QUEUE = "basicQueue";
+
+    String BASIC_QUEUE_ROUTING_KEY = "basicQueueRoutingKey.#";
+
+    String BASIC_QUEUE_DEAD_LETTER_EXCHANGE = "basicQueueDeadLetterExchange";
+
+    String BASIC_QUEUE_DEAD_LETTER_ROUTING_KEY = "basicQueueDeadLetterRoutingKey";
+
+    String BASIC_QUEUE_DEAD_LETTER_QUEUE = "basicQueueDeadLetterQueue";
 }

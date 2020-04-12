@@ -29,6 +29,14 @@ public class GoodsController {
     private static final String REPEAT_MESSAGE_KEY = "repeatMessageKey";
 
 
+    /**
+     * 监听队列名为orderService的队列
+     * @param message
+     * @param content
+     * @param deliveryTag
+     * @param channel
+     * @throws IOException
+     */
     @RabbitListener(
             queues = Constants.ORDER_QUEUE_NAME,
             errorHandler = "messageErrorHandler",
@@ -64,6 +72,14 @@ public class GoodsController {
         System.out.println("decrementCont");
     }
 
+    /**
+     * 监听队列名为orderService的队列，
+     * 即此队列有两个消费者
+     * @param message
+     * @param deliveryTag
+     * @param channel
+     * @throws IOException
+     */
     @RabbitListener(
             queues = Constants.ORDER_QUEUE_NAME
     )
@@ -77,6 +93,14 @@ public class GoodsController {
         System.out.println("decrementCont1");
     }
 
+    /**
+     * 监听队列名为preFetchQueueName的队列
+     * @param message
+     * @param content
+     * @param deliveryTag
+     * @param channel
+     * @throws IOException
+     */
     @RabbitListener(
             queues = Constants.PRE_FETCH_QUEUE_NAME,
             errorHandler = "messageErrorHandler",
@@ -133,8 +157,51 @@ public class GoodsController {
             // TODO 但要注意: 如果这么设置的话，有可能会出现死循环
             channel.basicReject(deliveryTag, true);
         }
+    }
 
 
+    /**
+     * basicQueue队列的消费者
+     */
+    @RabbitListener(
+            queues = Constants.BASIC_QUEUE,
+            errorHandler = "messageErrorHandler",
+            containerFactory = "simpleRabbitListenerContainerFactory"
+    )
+    public void basicQueueConsumer(
+            Message message,
+            String content,
+            @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag,
+            @Header(AmqpHeaders.CHANNEL) Channel channel) throws IOException {
+        Map<String, Object> messageContent = JSON.parseObject(content, Map.class);
+
+        // 订单号为偶数的交给死信队列
+        if ((Integer) messageContent.get("orderId") % 2 == 0) {
+            logger.info("拒绝消费消息deliveryTag: {}, 业务参数: {}", deliveryTag, messageContent);
+            channel.basicReject(deliveryTag, false);
+        } else {
+            logger.info("消息deliveryTag{}消费成功, 订单ID: {}", deliveryTag, messageContent.get("orderId"));
+            channel.basicAck(deliveryTag, false);
+        }
 
     }
+
+    /**
+     * basicQueue的死信队列消费者
+     */
+    @RabbitListener(
+            queues = Constants.BASIC_QUEUE_DEAD_LETTER_QUEUE,
+            errorHandler = "messageErrorHandler",
+            containerFactory = "simpleRabbitListenerContainerFactory"
+    )
+    public void basicQueueDeadLetterQueueConsumer(
+            Message message,
+            String content,
+            @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag,
+            @Header(AmqpHeaders.CHANNEL) Channel channel) throws IOException {
+        Map<String, Object> messageContent = JSON.parseObject(content, Map.class);
+        logger.error("死信队列消费者收到消息deliveryTag: {}, 业务参数: {}", deliveryTag, messageContent);
+        channel.basicAck(deliveryTag, false);
+    }
+
 }
