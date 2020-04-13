@@ -34,11 +34,97 @@
 
 ## 三、Spring Boot集成rabbit mq流程
 
-### 3.1 创建队列 queue
+### 3.1 新建连接bean
+
+* 新建`org.springframework.amqp.rabbit.connection.ConnectionFactory`bean
+
+  ```java
+  @Bean
+  public ConnectionFactory connectionFactory() {
+      CachingConnectionFactory cachingConnectionFactory = new CachingConnectionFactory();
+      cachingConnectionFactory.setVirtualHost("/eugene");
+      cachingConnectionFactory.setUsername("guest");
+      cachingConnectionFactory.setPassword("guest");
+      cachingConnectionFactory.setHost("192.168.111.145");
+      cachingConnectionFactory.setPublisherConfirms(true);
+      return cachingConnectionFactory;
+  }
+  ```
+
+### 3.2 RabbitTemplate
+
+* 在springboot集成rabbit mq的过程中，**RabbitTemplate**的主要作用就是和rabbit mq链接，后续将使用它来发送消息。具体语法如下:
+
+  ```java
+  rabbitTemplate.convertAndSend("topic名字", "routingKey", "传递的消息");
+  // 通过这行代码，rabbitTemplate就能知道将消息发送到哪个交换机上，然后交换机就能根据自己的特性，将routingKey将消息发送给符合条件的队列
+  ```
+  
+* `RabbitTemplate`bean定义如下
+
+  ```java
+  @Bean
+  public RabbitTemplate rabbitTemplate() {
+      RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory());
+      rabbitTemplate.setConfirmCallback((correlationData, ack, cause) -> {
+          // 第一个参数: 是生产消息是传入的CorrelationData对象，里面维护了一个id，
+          // 可以自定义取值来标识某些业务
+          // 第二个参数: 判断消息有没有发成功
+          // 第三个参数: 发生异常的原因，cause为异常的原因
+          System.out.println("ack: " + ack);
+          System.out.println("cause: " + cause);
+          System.out.println("correlationData: " + correlationData);
+      });
+  
+      // 允许失败回调
+      rabbitTemplate.setMandatory(true);
+      rabbitTemplate.setReturnCallback((message, replyCode, replyText, exchange, routingKey) -> {
+          // 第一个参数: message -> 消息主体
+          // 第二个参数: 发送失败错误码
+          // 第三个参数: 发送失败错误信息
+          // 第四个参数: 发送的交换机名字
+          // 第五个参数: 发送消息的routingKey
+          System.out.println(message);
+          System.out.println(replyCode);
+          System.out.println(replyText);
+          System.out.println(exchange);
+          System.out.println(routingKey);
+      });
+  
+      // 自己实现了一个消息转换器
+      rabbitTemplate.setMessageConverter(new MessageConverter() {
+          @Override
+          public Message toMessage(Object object, MessageProperties messageProperties) throws MessageConversionException {
+              // 指定发送的消息类型为test/plain
+              messageProperties.setContentType("text/plain");
+              // 指定消息的编码格式
+              messageProperties.setContentEncoding("UTF-8");
+              Message message = new Message(JSON.toJSONBytes(object), messageProperties);
+              return message;
+          }
+  
+          @Override
+          public Object fromMessage(Message message) throws MessageConversionException {
+              return message;
+          }
+      });
+  
+      return rabbitTemplate;
+  }
+  ```
+
+### 3.3 创建队列 queue
 
 * 直接创建一个`org.springframework.amqp.core.Queue`类型的bean即可
 
-### 3.2 创建交换机exchange
+  ```java
+  @Bean
+  public Queue preFetchQueue() {
+      return QueueBuilder.durable(Constants.PRE_FETCH_QUEUE_NAME).build();
+  }
+  ```
+
+### 3.4 创建交换机exchange
 
 * 直接创建一个对应类型的exchange即可。
 
@@ -56,7 +142,7 @@
   (TopicExchange) ExchangeBuilder.topicExchange("topicExchangeName").withArgument("参数key", "value").build();
   ```
 
-### 3.3 将绑定交换机、队列和routing key
+### 3.5将绑定交换机、队列和routing key
 
 * 使用提供的`Binding`对象即可，如下:
 
@@ -65,16 +151,7 @@
   // 大致的语法就是将队列绑定到交换机中并监听具体的key
   ```
 
-### 3.4 RabbitTemplate
-
-* 在springboot集成rabbit mq的过程中，**RabbitTemplate**的主要作用就是和rabbit mq链接，后续将使用它来发送消息。具体语法如下:
-
-  ```java
-  rabbitTemplate.convertAndSend("topic名字", "routingKey", "传递的消息");
-  // 通过这行代码，rabbitTemplate就能知道将消息发送到哪个交换机上，然后交换机就能根据自己的特性，将routingKey将消息发送给符合条件的队列
-  ```
-
-### 3.5 使用@RabbitListener指定消费者手动确认消息
+### 3.6使用@RabbitListener指定消费者手动确认消息
 
 * 注解添加listenter参数，eg如下:
 
@@ -121,7 +198,7 @@
   }
   ```
 
-### 3.6 注意事项
+### 3.7 注意事项
 
 * rabbitTemplate能够直接与rabbit服务端进行交互，直接使用**convertAndSend**方法就能实现消息发送
 
@@ -302,6 +379,10 @@
 
   1. 使用备用交换机的话，在rabbitTemplate中配置的两个失败回调要主交换机和备用交换机都失败后才会回调。
 
+* 备用交换机原理:
+
+  ![https://github.com/AvengerEug/rabbit-mq/blob/develop/备用交换机.png](https://github.com/AvengerEug/rabbit-mq/blob/develop/备用交换机.png)
+
   ---
 
 ## 五、消息预取
@@ -311,12 +392,14 @@
 * 为什么需要消息预取？
 
   ```txt
-  对于Rabbitmq，它发送消息的机制为轮询，且一次性全部发完。如果消息量比极少还没关系，若消息量非常多，那么客户端维护受得了。于是，我们期望rabbit在往消费者发送消息时，等消息消费完了再发送下一条。这就是消息预取
+  对于Rabbitmq，它发送消息的机制为轮询，且一次性全部发完。如果消息量比极少还没关系，若消息量非常多，那么客户端可能扛不住。于是，我们期望rabbit在往消费者发送消息时，等消息消费完了再发送下一波。这就是消息预
   ```
 
-* 如何实现?
+### 5.2 如何实现
 
-  ```
+* 步骤
+
+  ```txt
   客户端在channel中设置如下配置: channel.basicQos(1);
   表示rabbitmq中一次只往消费者客户端发送1条消息，待消息确认消费完后再发送第二条
   所以推送多少条消息由消费者来决定
@@ -362,4 +445,6 @@
   4. 设置消费者监听队列B信息
   ```
 
-  
+* 死信队列原理图:
+
+  ![https://github.com/AvengerEug/rabbit-mq/blob/develop/死信队列.png](https://github.com/AvengerEug/rabbit-mq/blob/develop/死信队列.png)
