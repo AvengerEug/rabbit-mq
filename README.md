@@ -381,7 +381,7 @@
 
 * 备用交换机原理:
 
-  ![https://github.com/AvengerEug/rabbit-mq/blob/develop/备用交换机.png](https://github.com/AvengerEug/rabbit-mq/blob/develop/备用交换机.png)
+  ![./备用交换机.png](./备用交换机.png)
 
   ---
 
@@ -447,4 +447,4 @@
 
 * 死信队列原理图:
 
-  ![https://github.com/AvengerEug/rabbit-mq/blob/develop/死信队列.png](https://github.com/AvengerEug/rabbit-mq/blob/develop/死信队列.png)
+  ![./死信队列.png](./死信队列.png)
