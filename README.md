@@ -30,9 +30,9 @@
 
 ### 2.5 注意
 
-* 所有的`Routing Key`必须要使用`.`隔开。是Rabbit mq的规范。
+* 所有的`Routing Key`必须要使用`.`隔开。是RabbitMQ的规范。
 
-## 三、Spring Boot集成rabbit mq流程
+## 三、Spring Boot集成RabbitMQ流程
 
 ### 3.1 新建连接bean
 
@@ -53,7 +53,7 @@
 
 ### 3.2 RabbitTemplate
 
-* 在springboot集成rabbit mq的过程中，**RabbitTemplate**的主要作用就是和rabbit mq链接，后续将使用它来发送消息。具体语法如下:
+* 在springboot集成RabbitMQ的过程中，**RabbitTemplate**的主要作用就是和RabbitMQ链接，后续将使用它来发送消息。具体语法如下:
 
   ```java
   rabbitTemplate.convertAndSend("topic名字", "routingKey", "传递的消息");
@@ -66,6 +66,7 @@
   @Bean
   public RabbitTemplate rabbitTemplate() {
       RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory());
+      // 将消息发送给RabbitMQ的回调
       rabbitTemplate.setConfirmCallback((correlationData, ack, cause) -> {
           // 第一个参数: 是生产消息是传入的CorrelationData对象，里面维护了一个id，
           // 可以自定义取值来标识某些业务
@@ -78,6 +79,7 @@
   
       // 允许失败回调
       rabbitTemplate.setMandatory(true);
+      // 当消息服务器将消息发送给队列中时的回调
       rabbitTemplate.setReturnCallback((message, replyCode, replyText, exchange, routingKey) -> {
           // 第一个参数: message -> 消息主体
           // 第二个参数: 发送失败错误码
@@ -223,8 +225,8 @@
 
 * 解决方案: 
 
-  1. 针对方向1：在将消息发送至交换机时，rabbit mq会进行一次回调  ---- `发送方确认`
-  2. 针对方向2：在交换机将消息推送给队列失败时，rabbit mq也会进行回调  ---- `失败回调`
+  1. 针对方向1：在将消息发送至交换机时，RabbitMQ会进行一次回调  ---- `发送方确认`
+  2. 针对方向2：在交换机将消息推送给队列失败时，RabbitMQ也会进行回调  ---- `失败回调`
 
 * 实践: 
 
@@ -313,7 +315,7 @@
 
 * 通过看了部分源码，大致知道了spring在消费rabbitmq消息时的处理，可以在rabbitmqTemplate中添加指定的消息转换器，其中包含，发送消息时的转换器回调以及接收消息时的转换器回调
 
-### 4.3 备用交换机
+### 4.3 备用交换机(解决交换机路由队列失败而衍生的交换机)
 
 * 一个消息发送失败的原因可以是**未将消息发送至交换机**、**交换机未绑定队列或者路由失败**
 
@@ -432,7 +434,7 @@
      3. 消费成功的消息则手动确认，否则拒绝消费。若系统可接受对消息的丢弃则可以直接拒绝消费且不入队列，若消息不可接受消息的丢弃，则可以利用死信队列机制
   ```
 
-## 六、死信队列
+## 六、死信队列(解决接收消费者拒绝消息但不返回原队列的操作)
 
 * 死信队列的存在就是保证消息不丢失。在我们消费消息时，我们可以拒绝消息，其中可以设置是否将消息重返队列。若设置不返回队列，此消息将被`丢弃`。为了保证消息不丢弃，我们可以采用死信队列的方式，在拒绝消费消息且不让消息回队列的情况下，可以设置一个死信队列，rabbitmq会专门接收这种特性的消息。
 
